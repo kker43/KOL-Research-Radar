@@ -196,6 +196,26 @@ class Repository:
             ).fetchone()
         return row is not None
 
+    def get_previous_opinion(
+        self,
+        author_id: int,
+        subject_key: str,
+        topic: Topic,
+        before: datetime,
+    ) -> Opinion | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT * FROM opinions
+                WHERE author_id = ? AND subject_key = ? AND topic = ?
+                  AND published_at < ?
+                ORDER BY published_at DESC, id DESC
+                LIMIT 1
+                """,
+                (author_id, subject_key, topic.value, _dump_datetime(before)),
+            ).fetchone()
+        return self._opinion_from_row(row) if row else None
+
     def list_opinions(
         self,
         *,

@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from kol_radar.domain import (
@@ -60,3 +60,11 @@ def test_repository_round_trip_and_article_idempotency(tmp_path: Path):
         repo.list_opinions(subject_key="AI_CAPEX")[0].thesis
         == "AI capex remains in an uptrend."
     )
+    previous = repo.get_previous_opinion(
+        author_id=author.id,
+        subject_key="AI_CAPEX",
+        topic=Topic.trend,
+        before=article.published_at + timedelta(seconds=1),
+    )
+    assert previous is not None
+    assert previous.id == opinion.id
