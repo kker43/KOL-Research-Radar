@@ -3,11 +3,13 @@ from __future__ import annotations
 import hashlib
 import re
 from dataclasses import dataclass
+from datetime import datetime, timedelta, timezone
+from typing import Callable
 
 from kol_radar.domain import Article, Author, AuthorType, Opinion, Source
 from kol_radar.extraction.base import OpinionExtractor
 from kol_radar.normalization.subjects import normalize_subject
-from kol_radar.providers.base import FetchedArticle
+from kol_radar.providers.base import FetchedArticle, ProviderUnavailable, SourceProvider
 from kol_radar.storage.repository import Repository
 
 
@@ -18,6 +20,18 @@ class IngestionResult:
     author_id: int
     opinions_count: int
     skipped_existing: bool
+
+
+@dataclass(frozen=True)
+class SyncResult:
+    source_id: int
+    discovered: int = 0
+    new: int = 0
+    skipped: int = 0
+    failed: int = 0
+    opinions: int = 0
+    status: str = "success"
+    error: str | None = None
 
 
 def _normalized_content(content: str) -> str:
@@ -122,3 +136,86 @@ class IngestionService:
             opinions_count=opinions_count,
             skipped_existing=False,
         )
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+class SyncService:
+    def __init__(
+        self,
+        repository: Repository,
+        ingestion_service: IngestionService,
+        providers: dict[str, SourceProvider],
+        *,
+        clock: Callable[[], datetime] = _utc_now,
+    ):
+        self.repository = repository
+        self.ingestion_service = ingestion_service
+        self.providers = providers
+        self.clock = clock
+
+    def sync_source(self, source_id: int, lookback_days: int) -> SyncResult:
+        source = self.repository.get_source(source_id)
+        if source is None:
+            raise KeyError(f"Source {source_id} does not exist")
+        started_at = self.clock()
+        since = source.last_synced_at or started_at - timedelta(days=lookback_days)
+        provider = self.providers.get(source.provider)
+        if provider is None:
+            return self._failed_source(source_id, started_at, "ProviderUnavailable")
+        try:
+            discovered_articles = provider.discover(source.external_id, since)
+        except ProviderUnavailable as error:
+            return self._failed_source(source_id, started_at, type(error).__name__)
+
+        new = skipped = failed = opinions = 0
+        for discovered in discovered_articles:
+            if self.repository.get_article_by_url(discovered.url) is not None:
+                skipped += 1
+                continue
+            try:
+                fetched = provider.fetch(discovered)
+                result = self.ingestion_service.ingest_fetched(
+                    fetched,
+                    provider_name=source.provider,
+                    external_source_id=source.external_id,
+                )
+                if result.skipped_existing:
+                    skipped += 1
+                else:
+                    new += 1
+                    opinions += result.opinions_count
+            except Exception:
+                failed += 1
+
+        completed_at = self.clock()
+        if failed == 0:
+            self.repository.update_source_last_synced(source_id, completed_at)
+        result = SyncResult(
+            source_id=source_id,
+            discovered=len(discovered_articles),
+            new=new,
+            skipped=skipped,
+            failed=failed,
+            opinions=opinions,
+            status="success" if failed == 0 else "partial",
+        )
+        self.repository.record_sync_run(result, started_at, completed_at)
+        return result
+
+    def sync_all(self, lookback_days: int) -> list[SyncResult]:
+        return [
+            self.sync_source(source.id, lookback_days)
+            for source in self.repository.list_sources()
+            if source.id is not None
+        ]
+
+    def _failed_source(
+        self, source_id: int, started_at: datetime, error: str
+    ) -> SyncResult:
+        completed_at = self.clock()
+        result = SyncResult(source_id=source_id, status="failed", error=error)
+        self.repository.record_sync_run(result, started_at, completed_at)
+        return result

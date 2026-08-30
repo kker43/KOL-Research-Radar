@@ -1,0 +1,21 @@
+{
+  "version": "https://jsonfeed.org/version/1.1",
+  "title": "测试公众号",
+  "home_page_url": "https://mp.weixin.qq.com/",
+  "items": [
+    {
+      "id": "article-august",
+      "url": "https://mp.weixin.qq.com/s/wewe-august",
+      "title": "八月观点",
+      "date_published": "2026-08-20T08:00:00Z",
+      "content_html": "<p>AI Capex 需求仍然强劲。</p><p>趋势保持向上。</p>"
+    },
+    {
+      "id": "article-july",
+      "url": "https://mp.weixin.qq.com/s/wewe-july",
+      "title": "七月观点",
+      "date_published": "2026-07-20T08:00:00Z",
+      "content_text": "DRAM 价格处于改善趋势。"
+    }
+  ]
+}

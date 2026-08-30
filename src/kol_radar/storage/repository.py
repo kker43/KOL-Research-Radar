@@ -82,6 +82,65 @@ class Repository:
                 ).fetchone()
         return self._author_from_row(row)
 
+    def get_source(self, source_id: int) -> Source | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM sources WHERE id = ?", (source_id,)
+            ).fetchone()
+        return self._source_from_row(row) if row else None
+
+    def list_sources(self) -> list[Source]:
+        with self._connect() as connection:
+            rows = connection.execute("SELECT * FROM sources ORDER BY id").fetchall()
+        return [self._source_from_row(row) for row in rows]
+
+    def update_source_last_synced(
+        self, source_id: int, last_synced_at: datetime
+    ) -> Source:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE sources SET last_synced_at = ? WHERE id = ?",
+                (_dump_datetime(last_synced_at), source_id),
+            )
+            row = connection.execute(
+                "SELECT * FROM sources WHERE id = ?", (source_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Source {source_id} does not exist")
+        return self._source_from_row(row)
+
+    def record_sync_run(
+        self, result, started_at: datetime, completed_at: datetime
+    ) -> int:
+        with self._connect() as connection:
+            cursor = connection.execute(
+                """
+                INSERT INTO sync_runs(
+                    source_id, started_at, completed_at, status,
+                    discovered_count, new_count, skipped_count, failed_count,
+                    opinion_count, error
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    result.source_id,
+                    _dump_datetime(started_at),
+                    _dump_datetime(completed_at),
+                    result.status,
+                    result.discovered,
+                    result.new,
+                    result.skipped,
+                    result.failed,
+                    result.opinions,
+                    result.error,
+                ),
+            )
+            return int(cursor.lastrowid)
+
+    def list_sync_runs(self) -> list[dict[str, object]]:
+        with self._connect() as connection:
+            rows = connection.execute("SELECT * FROM sync_runs ORDER BY id").fetchall()
+        return [dict(row) for row in rows]
+
     def upsert_article(self, article: Article) -> Article:
         with self._connect() as connection:
             row = connection.execute(
