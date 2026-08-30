@@ -113,6 +113,21 @@ class Repository:
                 ).fetchone()
         return self._article_from_row(row)
 
+    def get_author(self, author_id: int) -> Author | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM authors WHERE id = ?", (author_id,)
+            ).fetchone()
+        return self._author_from_row(row) if row else None
+
+    def find_author_by_name(self, name: str) -> Author | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM authors WHERE name = ? COLLATE NOCASE ORDER BY id LIMIT 1",
+                (name,),
+            ).fetchone()
+        return self._author_from_row(row) if row else None
+
     def insert_opinion(self, opinion: Opinion) -> Opinion:
         with self._connect() as connection:
             connection.execute(
