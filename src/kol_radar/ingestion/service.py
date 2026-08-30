@@ -10,11 +10,13 @@ from typing import Callable
 from kol_radar.domain import Article, Author, AuthorType, Opinion, Source
 from kol_radar.extraction.base import OpinionExtractor
 from kol_radar.normalization.subjects import normalize_subject
+from kol_radar.obsidian.exporter import ObsidianExporter
 from kol_radar.providers.base import FetchedArticle, ProviderUnavailable, SourceProvider
 from kol_radar.storage.repository import Repository
 
 
 logger = logging.getLogger(__name__)
+SYNC_OVERLAP = timedelta(days=1)
 
 
 @dataclass(frozen=True)
@@ -159,12 +161,14 @@ class SyncService:
         repository: Repository,
         ingestion_service: IngestionService,
         providers: dict[str, SourceProvider],
+        exporter: ObsidianExporter,
         *,
         clock: Callable[[], datetime] = _utc_now,
     ):
         self.repository = repository
         self.ingestion_service = ingestion_service
         self.providers = providers
+        self.exporter = exporter
         self.clock = clock
 
     def sync_source(self, source_id: int, lookback_days: int) -> SyncResult:
@@ -173,7 +177,11 @@ class SyncService:
             raise KeyError(f"Source {source_id} does not exist")
         started_at = self.clock()
         logger.info("sync_start source_id=%s", source_id)
-        since = source.last_synced_at or started_at - timedelta(days=lookback_days)
+        since = (
+            source.last_synced_at - SYNC_OVERLAP
+            if source.last_synced_at is not None
+            else started_at - timedelta(days=lookback_days)
+        )
         provider = self.providers.get(source.provider)
         if provider is None:
             return self._failed_source(source_id, started_at, "ProviderUnavailable")
@@ -193,11 +201,16 @@ class SyncService:
         )
 
         new = skipped = failed = opinions = 0
+        successful_publication_times: list[datetime] = []
         for discovered in discovered_articles:
-            if self.repository.get_article_by_url(discovered.url) is not None:
-                skipped += 1
-                continue
             try:
+                existing = self.repository.get_article_by_url(discovered.url)
+                if existing is not None and existing.processed_at is not None:
+                    self._export_article(existing.id)
+                    skipped += 1
+                    if discovered.published_at is not None:
+                        successful_publication_times.append(discovered.published_at)
+                    continue
                 fetched = provider.fetch(discovered)
                 result = self.ingestion_service.ingest_fetched(
                     fetched,
@@ -209,6 +222,9 @@ class SyncService:
                 else:
                     new += 1
                     opinions += result.opinions_count
+                self._export_article(result.article_id)
+                if discovered.published_at is not None:
+                    successful_publication_times.append(discovered.published_at)
             except Exception as error:
                 failed += 1
                 logger.warning(
@@ -218,8 +234,10 @@ class SyncService:
                 )
 
         completed_at = self.clock()
-        if failed == 0:
-            self.repository.update_source_last_synced(source_id, completed_at)
+        if failed == 0 and successful_publication_times:
+            self.repository.update_source_last_synced(
+                source_id, max(successful_publication_times)
+            )
         result = SyncResult(
             source_id=source_id,
             discovered=len(discovered_articles),
@@ -255,3 +273,18 @@ class SyncService:
         result = SyncResult(source_id=source_id, status="failed", error=error)
         self.repository.record_sync_run(result, started_at, completed_at)
         return result
+
+    def _export_article(self, article_id: int) -> None:
+        article = self.repository.get_article(article_id)
+        if article is None:
+            raise RuntimeError(f"Article {article_id} disappeared before export")
+        source = self.repository.get_source(article.source_id)
+        author = self.repository.get_author(article.author_id)
+        if source is None or author is None:
+            raise RuntimeError(f"Article {article_id} has incomplete relationships")
+        self.exporter.export_article(
+            article,
+            source,
+            author,
+            self.repository.list_opinions_for_article(article_id),
+        )

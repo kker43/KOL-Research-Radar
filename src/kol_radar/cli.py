@@ -49,7 +49,7 @@ class SampleFixtureExtractor:
         ]
 
 
-class GoldenFixtureExtractor:
+class FixturePipelineExtractor:
     def __init__(self, records: list[dict[str, object]]):
         self.expected_by_url = {
             str(record["url"]): list(record["expected_opinions"])
@@ -188,6 +188,7 @@ def sync(source_id: Optional[int] = typer.Option(None, "--source-id")) -> None:
         repository,
         ingestion,
         {"wewe": WeWeFeedProvider(settings.wewe_rss_base_url)},
+        ObsidianExporter(resolve_obsidian_root(settings.obsidian_vault_path)),
     )
     for source in sources:
         result = service.sync_source(source.id, settings.initial_lookback_days)
@@ -251,9 +252,9 @@ def _fetched_from_golden(record: dict[str, object]) -> FetchedArticle:
     )
 
 
-def _run_eval(*, live: bool, settings: Settings) -> dict[str, int | float]:
+def _run_eval(*, live: bool, settings: Settings) -> dict[str, str | int | float]:
     records = _golden_records()
-    extractor = _live_extractor(settings) if live else GoldenFixtureExtractor(records)
+    extractor = _live_extractor(settings) if live else FixturePipelineExtractor(records)
     expected_total = sum(len(record["expected_opinions"]) for record in records)
     extracted_total = topic_matches = subject_matches = valid_evidence = hallucinations = 0
 
@@ -290,6 +291,7 @@ def _run_eval(*, live: bool, settings: Settings) -> dict[str, int | float]:
                     subject_matches += 1
 
     return {
+        "evaluation_mode": "live_model_eval" if live else "fixture_pipeline_acceptance",
         "articles_total": len(records),
         "opinions_expected": expected_total,
         "opinions_extracted": extracted_total,
@@ -305,7 +307,7 @@ def evaluate(
     fixture: bool = typer.Option(False, "--fixture"),
     live: bool = typer.Option(False, "--live"),
 ) -> None:
-    """Run the golden fixture eval, or live eval when explicitly requested."""
+    """Run fixture pipeline acceptance, or live model eval when requested."""
     if fixture and live:
         raise typer.BadParameter("Choose either --fixture or --live")
     settings = Settings()

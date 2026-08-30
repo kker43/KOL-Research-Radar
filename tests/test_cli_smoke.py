@@ -39,6 +39,7 @@ def test_watchlist_list_works_offline(tmp_path):
 def test_fixture_eval_has_valid_evidence_and_no_hallucinations():
     result = runner.invoke(app, ["eval", "--fixture"])
     assert result.exit_code == 0, result.output
+    assert "evaluation_mode=fixture_pipeline_acceptance" in result.output
     assert "evidence_validity=1.0" in result.output
     assert "hallucination_count=0" in result.output
 

@@ -4,6 +4,7 @@ import pytest
 from pydantic import ValidationError
 
 from kol_radar.domain import OpinionDraft, Stance, Topic
+from kol_radar.extraction.base import OpinionExtractionError
 from kol_radar.extraction.openai_extractor import OpenAIOpinionExtractor
 from kol_radar.providers.base import FetchedArticle, Paragraph
 
@@ -22,6 +23,11 @@ class FakeResponses:
 class FakeClient:
     def __init__(self, payload):
         self.responses = FakeResponses(payload)
+
+
+class FakeUnparsedResponses:
+    def parse(self, **kwargs):
+        return SimpleNamespace(output_parsed=None)
 
 
 def test_opinion_draft_requires_evidence():
@@ -95,3 +101,21 @@ def test_extractor_rejects_drafts_without_exact_evidence():
     request_text = str(client.responses.last_request["input"])
     assert "[p1] AI Capex 需求仍然强劲。" in request_text
     assert client.responses.last_request["model"] == "test-model"
+
+
+def test_extractor_raises_typed_error_when_structured_output_is_missing():
+    client = SimpleNamespace(responses=FakeUnparsedResponses())
+    article = FetchedArticle(
+        title="测试文章",
+        url="https://mp.weixin.qq.com/s/test",
+        source_name="测试公众号",
+        author_name="测试作者",
+        published_at=None,
+        content="AI Capex 需求仍然强劲。",
+        paragraphs=[Paragraph("p1", "AI Capex 需求仍然强劲。")],
+    )
+
+    extractor = OpenAIOpinionExtractor(client=client, model="test-model")
+
+    with pytest.raises(OpinionExtractionError):
+        extractor.extract(article)

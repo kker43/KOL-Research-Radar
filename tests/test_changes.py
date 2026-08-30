@@ -47,6 +47,20 @@ def test_risk_neutral_to_deteriorating_is_strengthening():
     assert detect_change(previous, current).change_type == ChangeType.strengthening
 
 
+def test_risk_deteriorating_to_negative_is_strengthening():
+    previous = make_opinion(topic=Topic.risk, stance=Stance.deteriorating)
+    current = make_opinion(topic=Topic.risk, stance=Stance.negative)
+
+    assert detect_change(previous, current).change_type == ChangeType.strengthening
+
+
+def test_risk_negative_to_deteriorating_is_weakening():
+    previous = make_opinion(topic=Topic.risk, stance=Stance.negative)
+    current = make_opinion(topic=Topic.risk, stance=Stance.deteriorating)
+
+    assert detect_change(previous, current).change_type == ChangeType.weakening
+
+
 def test_different_identity_is_unclear():
     previous = make_opinion(author_id=2)
     current = make_opinion(author_id=1)

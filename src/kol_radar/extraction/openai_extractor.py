@@ -6,6 +6,7 @@ import logging
 from pydantic import BaseModel, Field
 
 from kol_radar.domain import OpinionDraft
+from kol_radar.extraction.base import OpinionExtractionError
 from kol_radar.extraction.prompts import SYSTEM_PROMPT, format_article
 from kol_radar.providers.base import FetchedArticle
 
@@ -39,7 +40,7 @@ class OpenAIOpinionExtractor:
         result = response.output_parsed
         if result is None:
             self.last_rejected_count = 0
-            return []
+            raise OpinionExtractionError("structured opinion extraction returned no parsed result")
 
         paragraph_by_location = {
             paragraph.location: _normalize_whitespace(paragraph.text)

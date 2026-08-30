@@ -27,6 +27,7 @@ class OpinionChange:
 _RISK_STRENGTHENING = {
     (Stance.neutral, Stance.deteriorating),
     (Stance.improving, Stance.deteriorating),
+    (Stance.deteriorating, Stance.negative),
 }
 _RISK_WEAKENING = {(current, previous) for previous, current in _RISK_STRENGTHENING}
 _OPPORTUNITY_STRENGTHENING = {

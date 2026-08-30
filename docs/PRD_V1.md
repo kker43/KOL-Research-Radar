@@ -128,6 +128,8 @@ SourceProvider
 
 V1 主数据源。
 
+V1 自动监控以 WeWe 已存在且已知的 `feed_id` 为输入；公众号名称只作为展示元数据，不能代替 `feed_id`。KOL Radar 不调用 WeWe 管理接口自动创建订阅。
+
 负责：
 
 - 获取 Watchlist 公众号文章列表；
@@ -155,6 +157,8 @@ Fallback。
 用户可以直接提交 `https://mp.weixin.qq.com/...`。
 
 系统读取该文章并进入正常 `Article → Opinion Pipeline`。
+
+直接 URL 只表示单篇补录，不会自动建立该公众号的后续监控；持续发现仍需配置已知 WeWe `feed_id`。
 
 主要用于：
 
@@ -869,6 +873,8 @@ V1 必须包含最小 Eval，而不是只看代码是否能运行。
 
 建立 Golden Dataset。
 
+离线 `--fixture` 将人工确认的预期 Opinion 注入完整本地管线，用于 Fixture Pipeline Acceptance，不把结果表述为模型质量。只有 `--live` 才使用实际模型评估抽取效果；缺少 `OPENAI_API_KEY` 或 `OPENAI_MODEL` 时不得阻塞离线 V1 验收。
+
 至少检查：
 
 ### Extraction Precision
@@ -1183,8 +1189,9 @@ Codex 不得以“代码已创建”作为完成标准。
 7. 一次 Query 示例
 8. 一次 Digest 示例
 9. 幂等重跑测试
-10. Golden Eval 结果
-11. 已知限制
+10. Fixture Pipeline Acceptance 结果
+11. Live Eval 结果（仅当已配置凭据）
+12. 已知限制
 ```
 
 如果其中任一核心流程未通过，V1 不视为完成。

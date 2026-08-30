@@ -63,7 +63,7 @@ KOL_DB_PATH=./data/demo.db kol ingest-url --fixture tests/fixtures/article_sampl
 
 ## Watchlist and WeWe feed
 
-WeWe 是外部、可替换依赖，不属于核心业务层。先自行部署 WeWe RSS，在其 UI 中通过公众号分享链接添加订阅，再复制已知 `feed_id`：
+WeWe 是外部、可替换依赖，不属于核心业务层。V1 的自动监控必须先在 WeWe RSS 中添加订阅，并复制已知 `feed_id`；公众号名称不是可用的发现标识：
 
 ```bash
 kol watchlist add --name '公众号名称' --provider wewe --external-id MP_FEED_ID
@@ -75,10 +75,10 @@ kol sync --source-id 1
 KOL Radar 只读取公开 feed surface：
 
 ```text
-/feeds/<feed-id>.json?limit=100
+/feeds/<feed-id>.json?limit=100&page=<page>
 ```
 
-它不调用 WeWe admin API，也不自动请求 `update=true`。单个 Source 或 Article 失败不会中止其他 Source；存在 Article 失败时不会推进该 Source 的 `last_synced_at`，以便下次重试。
+它不调用 WeWe admin API，也不自动请求 `update=true`。Provider 会逐页读取到 lookback cutoff；同步水位记录成功观察到的最新文章发布时间，并用 1 天 overlap 接住延迟出现的文章。单个 Source 或 Article 失败不会中止其他 Source；存在 Article 失败时不会推进该 Source 的 `last_synced_at`，以便下次重试。
 
 直接添加文章 URL：
 
@@ -123,7 +123,7 @@ Exporter 只创建或更新自己带有同一 `article_id` 的生成文件，不
 
 ## Eval and tests
 
-完整测试与确定性 Golden Eval：
+完整测试与确定性 Fixture Pipeline Acceptance：
 
 ```bash
 pytest -q
@@ -136,7 +136,7 @@ kol eval --fixture
 kol eval --live
 ```
 
-Eval 输出 `articles_total`、`opinions_expected`、`opinions_extracted`、`topic_accuracy`、`subject_accuracy`、`evidence_validity`、`hallucination_count`。典型错误按 [`tests/badcases/README.md`](tests/badcases/README.md) 记录并附回归测试。
+`--fixture` 使用已确认的预期 Opinion 验证 Article → SQLite → Evidence 校验链路，不代表模型抽取质量；输出 `evaluation_mode=fixture_pipeline_acceptance`。`--live` 才调用配置的模型并输出 `evaluation_mode=live_model_eval`。两者都报告 `articles_total`、`opinions_expected`、`opinions_extracted`、`topic_accuracy`、`subject_accuracy`、`evidence_validity`、`hallucination_count`。典型错误按 [`tests/badcases/README.md`](tests/badcases/README.md) 记录并附回归测试。
 
 ## Security rules
 
