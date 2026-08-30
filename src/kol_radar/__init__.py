@@ -1,0 +1,1 @@
+"""KOL Research Radar."""

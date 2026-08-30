@@ -1,0 +1,12 @@
+.env
+data/
+.venv/
+__pycache__/
+.pytest_cache/
+*.py[cod]
+*.sqlite
+*.sqlite3
+wewe-auth/
+wewe-rss/
+cookies.json
+auth.json
