@@ -241,6 +241,13 @@ class Repository:
             ).fetchone()
         return self._article_from_row(row) if row else None
 
+    def get_article(self, article_id: int) -> Article | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM articles WHERE id = ?", (article_id,)
+            ).fetchone()
+        return self._article_from_row(row) if row else None
+
     def mark_article_processed(self, article_id: int) -> Article:
         with self._connect() as connection:
             connection.execute(

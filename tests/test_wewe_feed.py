@@ -1,4 +1,5 @@
 import json
+import logging
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -44,7 +45,8 @@ def test_wewe_provider_discovers_articles_since_cutoff(respx_mock):
     assert fetched.paragraphs[0].location == "p1"
 
 
-def test_sync_source_is_idempotent_and_records_runs(tmp_path, respx_mock):
+def test_sync_source_is_idempotent_and_records_runs(tmp_path, respx_mock, caplog):
+    caplog.set_level(logging.INFO)
     respx_mock.get("http://localhost:4000/feeds/MP_TEST.json?limit=100").respond(
         200, json=feed_payload()
     )
@@ -68,6 +70,9 @@ def test_sync_source_is_idempotent_and_records_runs(tmp_path, respx_mock):
     assert len(repo.list_articles()) == 2
     assert len(repo.list_opinions()) == 2
     assert len(repo.list_sync_runs()) == 2
+    messages = [record.getMessage() for record in caplog.records]
+    assert any("sync_start" in message for message in messages)
+    assert any("sync_end" in message for message in messages)
 
 
 def test_sync_all_isolates_unavailable_provider(tmp_path):

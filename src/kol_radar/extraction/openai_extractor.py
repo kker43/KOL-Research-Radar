@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import re
+import logging
 
 from pydantic import BaseModel, Field
 
 from kol_radar.domain import OpinionDraft
 from kol_radar.extraction.prompts import SYSTEM_PROMPT, format_article
 from kol_radar.providers.base import FetchedArticle
+
+
+logger = logging.getLogger(__name__)
 
 
 class OpinionExtractionResult(BaseModel):
@@ -48,4 +52,6 @@ class OpenAIOpinionExtractor:
             if paragraph is not None and excerpt in paragraph:
                 accepted.append(draft)
         self.last_rejected_count = len(result.opinions) - len(accepted)
+        if self.last_rejected_count:
+            logger.info("opinions_rejected count=%s", self.last_rejected_count)
         return accepted

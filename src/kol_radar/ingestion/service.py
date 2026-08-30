@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import logging
 import re
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -11,6 +12,9 @@ from kol_radar.extraction.base import OpinionExtractor
 from kol_radar.normalization.subjects import normalize_subject
 from kol_radar.providers.base import FetchedArticle, ProviderUnavailable, SourceProvider
 from kol_radar.storage.repository import Repository
+
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass(frozen=True)
@@ -92,6 +96,7 @@ class IngestionService:
         if stored_article.id is None:
             raise RuntimeError("Persisted article has no id")
         if stored_article.processed_at is not None:
+            logger.info("article_skipped article_id=%s", stored_article.id)
             return IngestionResult(
                 article_id=stored_article.id,
                 source_id=source.id,
@@ -129,6 +134,12 @@ class IngestionService:
             opinions_count += 1
 
         self.repository.mark_article_processed(stored_article.id)
+        logger.info(
+            "article_processed article_id=%s source_id=%s opinions_extracted=%s",
+            stored_article.id,
+            source.id,
+            opinions_count,
+        )
         return IngestionResult(
             article_id=stored_article.id,
             source_id=source.id,
@@ -161,6 +172,7 @@ class SyncService:
         if source is None:
             raise KeyError(f"Source {source_id} does not exist")
         started_at = self.clock()
+        logger.info("sync_start source_id=%s", source_id)
         since = source.last_synced_at or started_at - timedelta(days=lookback_days)
         provider = self.providers.get(source.provider)
         if provider is None:
@@ -168,7 +180,17 @@ class SyncService:
         try:
             discovered_articles = provider.discover(source.external_id, since)
         except ProviderUnavailable as error:
+            logger.warning(
+                "sync_source_failed source_id=%s error_type=%s",
+                source_id,
+                type(error).__name__,
+            )
             return self._failed_source(source_id, started_at, type(error).__name__)
+        logger.info(
+            "articles_discovered source_id=%s count=%s",
+            source_id,
+            len(discovered_articles),
+        )
 
         new = skipped = failed = opinions = 0
         for discovered in discovered_articles:
@@ -187,8 +209,13 @@ class SyncService:
                 else:
                     new += 1
                     opinions += result.opinions_count
-            except Exception:
+            except Exception as error:
                 failed += 1
+                logger.warning(
+                    "article_failed source_id=%s error_type=%s",
+                    source_id,
+                    type(error).__name__,
+                )
 
         completed_at = self.clock()
         if failed == 0:
@@ -203,6 +230,15 @@ class SyncService:
             status="success" if failed == 0 else "partial",
         )
         self.repository.record_sync_run(result, started_at, completed_at)
+        logger.info(
+            "sync_end source_id=%s status=%s new=%s skipped=%s failed=%s opinions=%s",
+            source_id,
+            result.status,
+            result.new,
+            result.skipped,
+            result.failed,
+            result.opinions,
+        )
         return result
 
     def sync_all(self, lookback_days: int) -> list[SyncResult]:

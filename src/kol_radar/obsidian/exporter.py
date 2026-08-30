@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import re
 import tempfile
 from pathlib import Path
 
 from kol_radar.domain import Article, Author, Opinion, Source
+
+
+logger = logging.getLogger(__name__)
 
 
 def resolve_obsidian_root(
@@ -117,4 +121,5 @@ class ObsidianExporter:
         finally:
             if temporary_path is not None and temporary_path.exists():
                 temporary_path.unlink()
+        logger.info("obsidian_synced article_id=%s", article.id)
         return target

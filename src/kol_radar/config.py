@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -14,3 +14,10 @@ class Settings(BaseSettings):
     openai_api_key: str | None = None
     openai_model: str | None = None
     log_level: str = "INFO"
+
+    @field_validator(
+        "obsidian_vault_path", "openai_api_key", "openai_model", mode="before"
+    )
+    @classmethod
+    def empty_string_is_none(cls, value):
+        return None if value == "" else value
