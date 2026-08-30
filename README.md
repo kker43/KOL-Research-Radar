@@ -34,9 +34,14 @@ Watchlist
 ## Documents
 
 - [`docs/PRD_V1.md`](docs/PRD_V1.md) — V1 产品需求与实现边界，当前唯一需求基线
+- [`docs/superpowers/plans/2026-08-30-kol-research-radar-v1.md`](docs/superpowers/plans/2026-08-30-kol-research-radar-v1.md) — Codex V1 Implementation Plan，按任务、测试与 Exit Criteria 执行
+
+## Implementation Order
+
+Codex 必须先阅读 PRD，再按 Implementation Plan 顺序执行。优先用 `ArticleURLProvider` 打通完整闭环，再接入 WeWe RSS-compatible Provider；不得因为公众号采集端异常阻塞核心 V1。
 
 ## V1 Non-goals
 
 V1 不实现：全网自动发现 KOL、Web UI、Dashboard、Vector DB、Knowledge Graph、复杂 RAG、Multi-Agent、自动交易、复杂 Scheduler、Obsidian 双向同步等。
 
-开发必须以 `docs/PRD_V1.md` 的 Definition of Done 和 Exit Criteria 为完成标准，而不是以“代码已生成”为完成标准。
+开发必须以 `docs/PRD_V1.md` 的 Definition of Done 和 Implementation Plan 的 Final Exit Criteria 为完成标准，而不是以“代码已生成”为完成标准。
