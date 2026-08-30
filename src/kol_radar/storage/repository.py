@@ -14,6 +14,7 @@ from kol_radar.domain import (
     Stance,
     SubjectType,
     Topic,
+    utc_now,
 )
 from kol_radar.storage.schema import initialize_schema
 
@@ -158,6 +159,42 @@ class Repository:
                 "SELECT * FROM articles ORDER BY published_at DESC, id DESC"
             ).fetchall()
         return [self._article_from_row(row) for row in rows]
+
+    def get_article_by_url(self, url: str) -> Article | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM articles WHERE url = ?", (url,)
+            ).fetchone()
+        return self._article_from_row(row) if row else None
+
+    def mark_article_processed(self, article_id: int) -> Article:
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE articles SET processed_at = ? WHERE id = ?",
+                (_dump_datetime(utc_now()), article_id),
+            )
+            row = connection.execute(
+                "SELECT * FROM articles WHERE id = ?", (article_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Article {article_id} does not exist")
+        return self._article_from_row(row)
+
+    def list_opinions_for_article(self, article_id: int) -> list[Opinion]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                "SELECT * FROM opinions WHERE source_article_id = ? ORDER BY id",
+                (article_id,),
+            ).fetchall()
+        return [self._opinion_from_row(row) for row in rows]
+
+    def article_has_opinions(self, article_id: int) -> bool:
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT 1 FROM opinions WHERE source_article_id = ? LIMIT 1",
+                (article_id,),
+            ).fetchone()
+        return row is not None
 
     def list_opinions(
         self,
