@@ -1,0 +1,69 @@
+[
+  {
+    "id": "clear-risk",
+    "title": "高估值板块风险",
+    "url": "https://mp.weixin.qq.com/s/golden-risk",
+    "source_name": "Golden Macro",
+    "author_name": "研究员甲",
+    "published_at": "2026-08-30T09:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "当前美股高估值板块的回撤风险正在增加。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "risk",
+        "raw_subject": "美股",
+        "expected_subject_key": "US_EQUITIES",
+        "stance": "deteriorating",
+        "thesis": "美股高估值板块的回撤风险正在增加。",
+        "rationale": ["高估值带来的回撤风险上升。"],
+        "source_excerpt": "当前美股高估值板块的回撤风险正在增加。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "explicit-positioning",
+    "title": "主动降低风险暴露",
+    "url": "https://mp.weixin.qq.com/s/golden-positioning",
+    "source_name": "Golden Allocation",
+    "author_name": "研究员乙",
+    "published_at": "2026-08-30T10:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "我会把美股仓位从七成降到五成，以降低组合风险暴露。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "positioning",
+        "raw_subject": "美股",
+        "expected_subject_key": "US_EQUITIES",
+        "stance": "negative",
+        "thesis": "将美股仓位从七成降到五成。",
+        "rationale": ["降低组合风险暴露。"],
+        "source_excerpt": "我会把美股仓位从七成降到五成，以降低组合风险暴露。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "no-investable-opinion",
+    "title": "活动通知",
+    "url": "https://mp.weixin.qq.com/s/golden-empty",
+    "source_name": "Golden Notices",
+    "author_name": null,
+    "published_at": "2026-08-30T11:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "本周六下午两点举行线上交流活动，欢迎报名参加。"
+      }
+    ],
+    "expected_opinions": []
+  }
+]
