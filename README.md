@@ -38,6 +38,7 @@ KOL_DB_PATH=./data/kol_radar.db
 INITIAL_LOOKBACK_DAYS=60
 OBSIDIAN_VAULT_PATH=
 WEWE_RSS_BASE_URL=http://localhost:4000
+LLM_BACKEND=codex
 OPENAI_API_KEY=
 OPENAI_MODEL=
 LOG_LEVEL=INFO
@@ -45,9 +46,30 @@ LOG_LEVEL=INFO
 
 `INITIAL_LOOKBACK_DAYS` 只允许 30–90，默认 60。不要把 `.env` 或任何 Cookie、Token、API Key、微信认证文件提交到 Git。
 
+### Default Codex backend
+
+V1.1 默认使用本机已登录的 Codex CLI / ChatGPT 订阅完成 Opinion Extraction，不需要 `OPENAI_API_KEY`，也不会读取、复制或保存 Codex 登录凭据。先安装 [Codex CLI](https://developers.openai.com/codex/cli/)，再使用 ChatGPT 账户登录：
+
+```bash
+codex login
+codex login status
+```
+
+`codex login status` 应显示通过 ChatGPT 登录。KOL Radar 会在一次性的空目录中以只读 sandbox 调用 Codex，并只接收符合现有 Opinion Schema 的结构化 JSON；SQLite 与 Obsidian 仍由 Python ingestion pipeline 在证据校验通过后写入。
+
+如需显式改用原有 OpenAI API backend：
+
+```env
+LLM_BACKEND=openai
+OPENAI_API_KEY=your-local-secret
+OPENAI_MODEL=your-model
+```
+
+只有 `openai` backend 需要这两个 OpenAI 配置。不要将真实值提交到 Git。
+
 ## ArticleURLProvider quick start
 
-真实 URL ingestion 需要 `OPENAI_API_KEY` 和 `OPENAI_MODEL`：
+默认 Codex backend 下，真实 URL ingestion 使用本机 ChatGPT 登录态，不需要 OpenAI API Key：
 
 ```bash
 kol ingest-url 'https://mp.weixin.qq.com/s/example'
@@ -130,10 +152,16 @@ pytest -q
 kol eval --fixture
 ```
 
-当且仅当本机同时配置 `OPENAI_API_KEY` 与 `OPENAI_MODEL` 时运行 live Eval：
+使用默认 Codex backend 运行 10 篇 Golden Dataset 的 Live Eval：
 
 ```bash
-kol eval --live
+kol eval --live --backend codex
+```
+
+该命令使用 ChatGPT 套餐内的 Codex 用量，不产生 OpenAI API 调用；单元测试和 fixture Eval 都不会调用 Codex。若显式选择 API backend，则需要本机配置 `OPENAI_API_KEY` 与 `OPENAI_MODEL`：
+
+```bash
+kol eval --live --backend openai
 ```
 
 `--fixture` 使用已确认的预期 Opinion 验证 Article → SQLite → Evidence 校验链路，不代表模型抽取质量；输出 `evaluation_mode=fixture_pipeline_acceptance`。`--live` 才调用配置的模型并输出 `evaluation_mode=live_model_eval`。两者都报告 `articles_total`、`opinions_expected`、`opinions_extracted`、`topic_accuracy`、`subject_accuracy`、`evidence_validity`、`hallucination_count`。典型错误按 [`tests/badcases/README.md`](tests/badcases/README.md) 记录并附回归测试。
@@ -150,6 +178,6 @@ kol eval --live
 - WeWe RSS 上游已归档，且历史上存在账号/IP 请求限制；适配器因此保持可替换，服务部署与扫码认证需在 WeWe 外部完成。
 - 微信文章 HTML 结构变化可能导致 `ArticleFetchError`，需要更新确定性 parser fixture。
 - V1 Subject normalization 只有小型固定别名表，未知 Subject 使用稳定本地 key，不做完整 Entity Resolution。
-- Query planner 与真实 Opinion extraction 依赖已配置的 OpenAI 模型；fixture 模式仅用于可复现验收。
+- Opinion extraction 默认依赖本机已通过 ChatGPT 登录的 Codex CLI；自然语言 Query planner 仍依赖显式配置的 OpenAI API backend。fixture 模式仅用于可复现验收。
 - V1 只提供 `kol sync` / `kol digest`，调度交给 cron、launchd 或其他外部 Scheduler。
 - 不提供全文语义搜索、自动 KOL 发现、交易建议或交易执行。

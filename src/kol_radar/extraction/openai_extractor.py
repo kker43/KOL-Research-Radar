@@ -1,25 +1,18 @@
 from __future__ import annotations
 
-import re
 import logging
-
-from pydantic import BaseModel, Field
 
 from kol_radar.domain import OpinionDraft
 from kol_radar.extraction.base import OpinionExtractionError
 from kol_radar.extraction.prompts import SYSTEM_PROMPT, format_article
+from kol_radar.extraction.validation import (
+    OpinionExtractionResult,
+    validate_opinion_evidence,
+)
 from kol_radar.providers.base import FetchedArticle
 
 
 logger = logging.getLogger(__name__)
-
-
-class OpinionExtractionResult(BaseModel):
-    opinions: list[OpinionDraft] = Field(default_factory=list, max_length=5)
-
-
-def _normalize_whitespace(value: str) -> str:
-    return re.sub(r"\s+", " ", value).strip()
 
 
 class OpenAIOpinionExtractor:
@@ -42,17 +35,9 @@ class OpenAIOpinionExtractor:
             self.last_rejected_count = 0
             raise OpinionExtractionError("structured opinion extraction returned no parsed result")
 
-        paragraph_by_location = {
-            paragraph.location: _normalize_whitespace(paragraph.text)
-            for paragraph in article.paragraphs
-        }
-        accepted: list[OpinionDraft] = []
-        for draft in result.opinions:
-            paragraph = paragraph_by_location.get(draft.source_location)
-            excerpt = _normalize_whitespace(draft.source_excerpt)
-            if paragraph is not None and excerpt in paragraph:
-                accepted.append(draft)
-        self.last_rejected_count = len(result.opinions) - len(accepted)
+        accepted, self.last_rejected_count = validate_opinion_evidence(
+            article, result.opinions
+        )
         if self.last_rejected_count:
             logger.info("opinions_rejected count=%s", self.last_rejected_count)
         return accepted
