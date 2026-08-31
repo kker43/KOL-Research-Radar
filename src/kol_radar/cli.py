@@ -9,8 +9,9 @@ from typing import Optional
 
 import typer
 
-from kol_radar.config import Settings
+from kol_radar.config import LLMBackend, Settings
 from kol_radar.domain import OpinionDraft, Source, Topic
+from kol_radar.extraction.codex_extractor import CodexOpinionExtractor
 from kol_radar.extraction.openai_extractor import OpenAIOpinionExtractor
 from kol_radar.ingestion.article_parser import parse_wechat_article
 from kol_radar.ingestion.service import IngestionResult, IngestionService, SyncService
@@ -69,14 +70,23 @@ def _repository(settings: Settings) -> Repository:
     return Repository(settings.kol_db_path)
 
 
-def _live_extractor(settings: Settings) -> OpenAIOpinionExtractor:
+def _openai_extractor(settings: Settings) -> OpenAIOpinionExtractor:
     if not settings.openai_api_key or not settings.openai_model:
-        raise typer.BadParameter("OPENAI_API_KEY and OPENAI_MODEL are required")
+        raise typer.BadParameter(
+            "OPENAI_API_KEY and OPENAI_MODEL are required for the OpenAI backend"
+        )
     from openai import OpenAI
 
     return OpenAIOpinionExtractor(
         OpenAI(api_key=settings.openai_api_key), settings.openai_model
     )
+
+
+def _live_extractor(settings: Settings, backend: LLMBackend | None = None):
+    selected_backend = backend or settings.llm_backend
+    if selected_backend is LLMBackend.codex:
+        return CodexOpinionExtractor()
+    return _openai_extractor(settings)
 
 
 def _export_ingestion(
@@ -220,7 +230,7 @@ def query(
     if fixture:
         plan = _fixture_query_plan(text)
     else:
-        extractor = _live_extractor(settings)
+        extractor = _openai_extractor(settings)
         plan = QueryPlanner(extractor.client, extractor.model).plan(text)
     typer.echo(QueryService(_repository(settings)).execute(plan).text)
 
@@ -252,9 +262,13 @@ def _fetched_from_golden(record: dict[str, object]) -> FetchedArticle:
     )
 
 
-def _run_eval(*, live: bool, settings: Settings) -> dict[str, str | int | float]:
+def _run_eval(
+    *, live: bool, settings: Settings, backend: LLMBackend | None = None
+) -> dict[str, str | int | float]:
     records = _golden_records()
-    extractor = _live_extractor(settings) if live else FixturePipelineExtractor(records)
+    extractor = (
+        _live_extractor(settings, backend) if live else FixturePipelineExtractor(records)
+    )
     expected_total = sum(len(record["expected_opinions"]) for record in records)
     extracted_total = topic_matches = subject_matches = valid_evidence = hallucinations = 0
 
@@ -306,13 +320,14 @@ def _run_eval(*, live: bool, settings: Settings) -> dict[str, str | int | float]
 def evaluate(
     fixture: bool = typer.Option(False, "--fixture"),
     live: bool = typer.Option(False, "--live"),
+    backend: Optional[LLMBackend] = typer.Option(None, "--backend"),
 ) -> None:
     """Run fixture pipeline acceptance, or live model eval when requested."""
     if fixture and live:
         raise typer.BadParameter("Choose either --fixture or --live")
     settings = Settings()
     configure_logging(settings.log_level)
-    metrics = _run_eval(live=live, settings=settings)
+    metrics = _run_eval(live=live, settings=settings, backend=backend)
     for key, value in metrics.items():
         typer.echo(f"{key}={value}")
 
