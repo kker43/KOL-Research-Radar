@@ -1,0 +1,229 @@
+[
+  {
+    "id": "clear-risk",
+    "title": "高估值板块风险",
+    "url": "https://mp.weixin.qq.com/s/golden-risk",
+    "source_name": "Golden Macro",
+    "author_name": "研究员甲",
+    "published_at": "2026-08-30T09:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "当前美股高估值板块的回撤风险正在增加。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "risk",
+        "raw_subject": "美股",
+        "expected_subject_key": "US_EQUITIES",
+        "stance": "deteriorating",
+        "thesis": "美股高估值板块的回撤风险正在增加。",
+        "rationale": ["高估值带来的回撤风险上升。"],
+        "source_excerpt": "当前美股高估值板块的回撤风险正在增加。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "explicit-positioning",
+    "title": "主动降低风险暴露",
+    "url": "https://mp.weixin.qq.com/s/golden-positioning",
+    "source_name": "Golden Allocation",
+    "author_name": "研究员乙",
+    "published_at": "2026-08-30T10:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "我会把美股仓位从七成降到五成，以降低组合风险暴露。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "positioning",
+        "raw_subject": "美股",
+        "expected_subject_key": "US_EQUITIES",
+        "stance": "negative",
+        "thesis": "将美股仓位从七成降到五成。",
+        "rationale": ["降低组合风险暴露。"],
+        "source_excerpt": "我会把美股仓位从七成降到五成，以降低组合风险暴露。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "no-investable-opinion",
+    "title": "活动通知",
+    "url": "https://mp.weixin.qq.com/s/golden-empty",
+    "source_name": "Golden Notices",
+    "author_name": null,
+    "published_at": "2026-08-30T11:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "本周六下午两点举行线上交流活动，欢迎报名参加。"
+      }
+    ],
+    "expected_opinions": []
+  },
+  {
+    "id": "nvda-opportunity",
+    "title": "算力需求带来的机会",
+    "url": "https://mp.weixin.qq.com/s/golden-nvda",
+    "source_name": "Golden Technology",
+    "author_name": "研究员丙",
+    "published_at": "2026-08-30T12:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "我们认为英伟达仍受益于算力需求扩张，当前存在明确的结构性机会。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "opportunity",
+        "raw_subject": "英伟达",
+        "expected_subject_key": "NVDA",
+        "stance": "positive",
+        "thesis": "英伟达仍存在结构性机会。",
+        "rationale": ["算力需求继续扩张。"],
+        "source_excerpt": "我们认为英伟达仍受益于算力需求扩张，当前存在明确的结构性机会。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "dram-trend",
+    "title": "存储价格改善",
+    "url": "https://mp.weixin.qq.com/s/golden-dram",
+    "source_name": "Golden Semis",
+    "author_name": "研究员丁",
+    "published_at": "2026-08-30T13:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "DRAM 价格趋势正在改善，供需关系比上季度更健康。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "trend",
+        "raw_subject": "DRAM",
+        "expected_subject_key": "DRAM",
+        "stance": "improving",
+        "thesis": "DRAM 价格趋势正在改善。",
+        "rationale": ["供需关系比上季度更健康。"],
+        "source_excerpt": "DRAM 价格趋势正在改善，供需关系比上季度更健康。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "nasdaq-market-view",
+    "title": "纳斯达克整体判断",
+    "url": "https://mp.weixin.qq.com/s/golden-nasdaq",
+    "source_name": "Golden Markets",
+    "author_name": "研究员戊",
+    "published_at": "2026-08-30T14:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "我们对纳斯达克的整体判断偏混合：盈利仍强，但估值压力不能忽视。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "market_view",
+        "raw_subject": "纳斯达克",
+        "expected_subject_key": "NASDAQ",
+        "stance": "mixed",
+        "thesis": "纳斯达克盈利与估值信号相互冲突。",
+        "rationale": ["盈利仍强，但估值存在压力。"],
+        "source_excerpt": "我们对纳斯达克的整体判断偏混合：盈利仍强，但估值压力不能忽视。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "ust-risk-reward",
+    "title": "美债赔率变化",
+    "url": "https://mp.weixin.qq.com/s/golden-ust",
+    "source_name": "Golden Rates",
+    "author_name": "研究员己",
+    "published_at": "2026-08-30T15:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "在收益率快速下行后，美债10年的风险收益比已经变差，继续追涨的赔率不足。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "risk_reward",
+        "raw_subject": "美债10年",
+        "expected_subject_key": "10Y_UST",
+        "stance": "negative",
+        "thesis": "美债10年的风险收益比已经变差。",
+        "rationale": ["收益率快速下行后继续追涨的赔率不足。"],
+        "source_excerpt": "在收益率快速下行后，美债10年的风险收益比已经变差，继续追涨的赔率不足。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "ai-capex-positioning",
+    "title": "降低主题风险暴露",
+    "url": "https://mp.weixin.qq.com/s/golden-ai-position",
+    "source_name": "Golden Portfolio",
+    "author_name": "研究员庚",
+    "published_at": "2026-08-30T16:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "我们会把 AI Capex 主题的风险暴露降低一半，不再维持此前的进攻仓位。"
+      }
+    ],
+    "expected_opinions": [
+      {
+        "topic": "positioning",
+        "raw_subject": "AI Capex",
+        "expected_subject_key": "AI_CAPEX",
+        "stance": "negative",
+        "thesis": "将 AI Capex 主题的风险暴露降低一半。",
+        "rationale": ["不再维持此前的进攻仓位。"],
+        "source_excerpt": "我们会把 AI Capex 主题的风险暴露降低一半，不再维持此前的进攻仓位。",
+        "source_location": "p1"
+      }
+    ]
+  },
+  {
+    "id": "earnings-calendar-only",
+    "title": "财报日历",
+    "url": "https://mp.weixin.qq.com/s/golden-calendar",
+    "source_name": "Golden Calendar",
+    "author_name": null,
+    "published_at": "2026-08-30T17:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "英伟达将在下周三盘后公布季度财报。"
+      }
+    ],
+    "expected_opinions": []
+  },
+  {
+    "id": "conference-recap-fact-only",
+    "title": "会议纪要发布",
+    "url": "https://mp.weixin.qq.com/s/golden-recap",
+    "source_name": "Golden Notices",
+    "author_name": null,
+    "published_at": "2026-08-30T18:00:00+08:00",
+    "paragraphs": [
+      {
+        "location": "p1",
+        "text": "今日会议共有十二位嘉宾发言，完整回放已经上线。"
+      }
+    ],
+    "expected_opinions": []
+  }
+]
