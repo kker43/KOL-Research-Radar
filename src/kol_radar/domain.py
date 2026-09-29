@@ -49,6 +49,9 @@ class Source(BaseModel):
     name: str
     provider: str
     external_id: str
+    registry_source_id: str | None = Field(
+        default=None, pattern=r"^src_[0-9a-f]{8}$"
+    )
     status: str = "active"
     created_at: datetime = Field(default_factory=utc_now)
     last_synced_at: datetime | None = None

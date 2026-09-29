@@ -190,6 +190,7 @@ id
 name
 provider
 external_id
+registry_source_id   # optional pointer to kker43/data_source
 status
 created_at
 last_synced_at
@@ -1211,3 +1212,67 @@ Codex 在实现期间：
 - 不得用“更高级的架构”替代本文定义的简单闭环。
 
 若实现中发现 PRD 无法满足的真实阻塞，应记录为 `KNOWN_LIMITATION`，优先完成其余 V1 闭环，而不是扩 Scope。
+
+
+---
+
+## 27. Source Authority / Registry Binding
+
+> Governance clarification; does not expand V1 product scope.
+
+- Consumer ID: `kol_research_radar`
+- Consumer Authority: this PRD
+- Shared Source Definition Authority: `kker43/data_source`
+
+### 27.1 Two different Source concepts
+
+The V1 local `Source` entity is an operational watchlist record. It owns:
+
+- local numeric id;
+- display name;
+- acquisition provider;
+- provider-specific `external_id` such as a WeWe feed id;
+- local sync status / `last_synced_at`;
+- optional `registry_source_id`.
+
+The shared `data_source` Source is the canonical information-product identity. For this consumer it should normally represent the **specific tracked WeChat Official Account / KOL publication**, not the fetch adapter.
+
+### 27.2 Acquisition is not Source Authority
+
+These are acquisition/runtime concerns and must not become global Source identities by default:
+
+- `WeWeFeedProvider`;
+- `ArticleURLProvider`;
+- `WEWE_RSS_BASE_URL`;
+- a particular self-hosted WeWe deployment;
+- feed endpoint paths;
+- authentication/session/cookie state.
+
+WeWe remains a replaceable middleware dependency. The currently referenced upstream `cooderl/wewe-rss` repository is archived, which reinforces the adapter boundary rather than changing Source identity.
+
+### 27.3 Article and Author
+
+- Article is downstream content/evidence produced by a Source.
+- A single Article does not automatically become a new global Source.
+- Author remains separate from Source because one Source may publish multiple authors and an author may appear in multiple Sources.
+
+### 27.4 Admission rule
+
+A local watchlist row may exist without a central binding, including legacy rows.
+
+Promotion to an Active shared Source/Usage requires:
+
+1. a real user-selected KOL / Official Account;
+2. stable Source identity;
+3. recoverable access/discovery path;
+4. a confirmed `kol_research_radar` use case;
+5. creation/verification in `data_source`;
+6. local binding through `registry_source_id`.
+
+Examples, fixtures and suggested KOL names are not sufficient Authority.
+
+### 27.5 Identity continuity
+
+A change in WeWe feed id, self-hosted base URL, provider adapter, article URL shape or acquisition implementation does not by itself change the global Source ID when the tracked KOL publication remains the same information product.
+
+A material change in the actual publication identity creates a new global Source and uses normal `supersedes` lineage in `data_source`.

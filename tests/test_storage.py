@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+import sqlite3
 
 from kol_radar.domain import (
     Article,
@@ -17,8 +18,14 @@ from kol_radar.storage.repository import Repository
 def test_repository_round_trip_and_article_idempotency(tmp_path: Path):
     repo = Repository(tmp_path / "radar.db")
     source = repo.upsert_source(
-        Source(name="Test Source", provider="article_url", external_id="test-source")
+        Source(
+            name="Test Source",
+            provider="article_url",
+            external_id="test-source",
+            registry_source_id="src_1234abcd",
+        )
     )
+    assert source.registry_source_id == "src_1234abcd"
     author = repo.upsert_author(
         Author(name="Test Author", author_type=AuthorType.person)
     )
@@ -68,3 +75,63 @@ def test_repository_round_trip_and_article_idempotency(tmp_path: Path):
     )
     assert previous is not None
     assert previous.id == opinion.id
+
+
+
+def test_repository_migrates_legacy_source_table_and_binds_registry_id(tmp_path: Path):
+    db_path = tmp_path / "legacy.db"
+    connection = sqlite3.connect(db_path)
+    connection.execute(
+        """
+        CREATE TABLE sources (
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            provider TEXT NOT NULL,
+            external_id TEXT NOT NULL,
+            status TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_synced_at TEXT,
+            UNIQUE(provider, external_id)
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO sources(
+            name, provider, external_id, status, created_at, last_synced_at
+        ) VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        ("Legacy Source", "wewe", "LEGACY_FEED", "active", "2026-08-30T00:00:00+00:00", None),
+    )
+    connection.commit()
+    connection.close()
+
+    repo = Repository(db_path)
+    source = repo.get_source(1)
+
+    assert source is not None
+    assert source.registry_source_id is None
+
+    bound = repo.bind_source_registry_id(1, "src_deadbeef")
+
+    assert bound.registry_source_id == "src_deadbeef"
+    assert repo.get_source(1).registry_source_id == "src_deadbeef"
+
+
+def test_registry_binding_is_preserved_when_source_is_upserted_without_binding(tmp_path: Path):
+    repo = Repository(tmp_path / "radar.db")
+    source = repo.upsert_source(
+        Source(
+            name="Tracked KOL",
+            provider="wewe",
+            external_id="MP_REAL",
+            registry_source_id="src_abcdef12",
+        )
+    )
+    updated = repo.upsert_source(
+        Source(name="Tracked KOL Renamed", provider="wewe", external_id="MP_REAL")
+    )
+
+    assert updated.id == source.id
+    assert updated.registry_source_id == "src_abcdef12"
+    assert updated.name == "Tracked KOL Renamed"
