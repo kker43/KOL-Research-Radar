@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from datetime import datetime
 from pathlib import Path
@@ -27,6 +28,9 @@ def _load_datetime(value: str | None) -> datetime | None:
     return datetime.fromisoformat(value) if value else None
 
 
+REGISTRY_SOURCE_ID_PATTERN = re.compile(r"^src_[0-9a-f]{8}$")
+
+
 class Repository:
     def __init__(self, db_path: Path):
         self.db_path = Path(db_path)
@@ -44,17 +48,26 @@ class Repository:
         with self._connect() as connection:
             connection.execute(
                 """
-                INSERT INTO sources(name, provider, external_id, status, created_at, last_synced_at)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO sources(
+                    name, provider, external_id, registry_source_id,
+                    status, created_at, last_synced_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(provider, external_id) DO UPDATE SET
                     name = excluded.name,
+                    registry_source_id = COALESCE(
+                        excluded.registry_source_id, sources.registry_source_id
+                    ),
                     status = excluded.status,
-                    last_synced_at = COALESCE(excluded.last_synced_at, sources.last_synced_at)
+                    last_synced_at = COALESCE(
+                        excluded.last_synced_at, sources.last_synced_at
+                    )
                 """,
                 (
                     source.name,
                     source.provider,
                     source.external_id,
+                    source.registry_source_id,
                     source.status,
                     _dump_datetime(source.created_at),
                     _dump_datetime(source.last_synced_at),
@@ -93,6 +106,23 @@ class Repository:
         with self._connect() as connection:
             rows = connection.execute("SELECT * FROM sources ORDER BY id").fetchall()
         return [self._source_from_row(row) for row in rows]
+
+    def bind_source_registry_id(
+        self, source_id: int, registry_source_id: str
+    ) -> Source:
+        if not REGISTRY_SOURCE_ID_PATTERN.fullmatch(registry_source_id):
+            raise ValueError("registry_source_id must match src_<8 lowercase hex>")
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE sources SET registry_source_id = ? WHERE id = ?",
+                (registry_source_id, source_id),
+            )
+            row = connection.execute(
+                "SELECT * FROM sources WHERE id = ?", (source_id,)
+            ).fetchone()
+        if row is None:
+            raise KeyError(f"Source {source_id} does not exist")
+        return self._source_from_row(row)
 
     def update_source_last_synced(
         self, source_id: int, last_synced_at: datetime
@@ -334,6 +364,7 @@ class Repository:
             name=row["name"],
             provider=row["provider"],
             external_id=row["external_id"],
+            registry_source_id=row["registry_source_id"],
             status=row["status"],
             created_at=_load_datetime(row["created_at"]),
             last_synced_at=_load_datetime(row["last_synced_at"]),

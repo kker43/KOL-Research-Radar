@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+import sqlite3
 import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -117,9 +118,11 @@ def list_watchlist() -> None:
         return
     for source in sources:
         synced = source.last_synced_at.isoformat() if source.last_synced_at else "never"
+        registry_source_id = source.registry_source_id or "unbound"
         typer.echo(
             f"{source.id} | {source.name} | {source.provider} | "
-            f"{source.external_id} | last_synced={synced}"
+            f"{source.external_id} | registry={registry_source_id} | "
+            f"last_synced={synced}"
         )
 
 
@@ -128,12 +131,18 @@ def add_watchlist(
     name: Optional[str] = typer.Option(None, "--name"),
     provider: str = typer.Option("wewe", "--provider"),
     external_id: Optional[str] = typer.Option(None, "--external-id"),
+    registry_source_id: Optional[str] = typer.Option(None, "--registry-source-id"),
     url: Optional[str] = typer.Option(None, "--url"),
 ) -> None:
     """Add a WeWe feed id or ingest one article URL."""
     settings = Settings()
     configure_logging(settings.log_level)
     if url:
+        if registry_source_id:
+            raise typer.BadParameter(
+                "--registry-source-id applies to named watchlist sources, "
+                "not one-off article ingestion"
+            )
         fetched = ArticleURLProvider().fetch_url(url)
         result, note = _ingest_fetched(settings, fetched, _live_extractor(settings))
         typer.echo(f"source_id={result.source_id} article_id={result.article_id} note={note}")
@@ -143,9 +152,42 @@ def add_watchlist(
     if provider != "wewe":
         raise typer.BadParameter("Manual V1 watchlist sources use --provider wewe")
     source = _repository(settings).upsert_source(
-        Source(name=name, provider=provider, external_id=external_id)
+        Source(
+            name=name,
+            provider=provider,
+            external_id=external_id,
+            registry_source_id=registry_source_id,
+        )
     )
-    typer.echo(f"source_id={source.id} name={source.name} provider={source.provider}")
+    typer.echo(
+        f"source_id={source.id} name={source.name} provider={source.provider} "
+        f"registry={source.registry_source_id or 'unbound'}"
+    )
+
+
+@watchlist_app.command("bind")
+def bind_watchlist(
+    source_id: int = typer.Option(..., "--source-id"),
+    registry_source_id: str = typer.Option(..., "--registry-source-id"),
+) -> None:
+    """Bind a local watchlist source to the canonical data_source Source ID."""
+    settings = Settings()
+    configure_logging(settings.log_level)
+    repository = _repository(settings)
+    if repository.get_source(source_id) is None:
+        raise typer.BadParameter(f"Unknown local source_id: {source_id}")
+    try:
+        source = repository.bind_source_registry_id(source_id, registry_source_id)
+    except ValueError as error:
+        raise typer.BadParameter(str(error)) from error
+    except sqlite3.IntegrityError as error:
+        raise typer.BadParameter(
+            f"registry source is already bound: {registry_source_id}"
+        ) from error
+    typer.echo(
+        f"source_id={source.id} registry={source.registry_source_id} "
+        f"name={source.name}"
+    )
 
 
 @app.command("ingest-url")

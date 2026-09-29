@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS sources (
     name TEXT NOT NULL,
     provider TEXT NOT NULL,
     external_id TEXT NOT NULL,
+    registry_source_id TEXT,
     status TEXT NOT NULL,
     created_at TEXT NOT NULL,
     last_synced_at TEXT,
@@ -69,3 +70,18 @@ CREATE TABLE IF NOT EXISTS sync_runs (
 
 def initialize_schema(connection: sqlite3.Connection) -> None:
     connection.executescript(SCHEMA)
+    columns = {
+        str(row[1])
+        for row in connection.execute("PRAGMA table_info(sources)").fetchall()
+    }
+    if "registry_source_id" not in columns:
+        connection.execute(
+            "ALTER TABLE sources ADD COLUMN registry_source_id TEXT"
+        )
+    connection.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_sources_registry_source_id
+        ON sources(registry_source_id)
+        WHERE registry_source_id IS NOT NULL
+        """
+    )

@@ -153,3 +153,53 @@ kol eval --live
 - Query planner 与真实 Opinion extraction 依赖已配置的 OpenAI 模型；fixture 模式仅用于可复现验收。
 - V1 只提供 `kol sync` / `kol digest`，调度交给 cron、launchd 或其他外部 Scheduler。
 - 不提供全文语义搜索、自动 KOL 发现、交易建议或交易执行。
+
+
+## Source authority and central registry
+
+Consumer ID: `kol_research_radar`.
+
+KOL Research Radar 与共享 `kker43/data_source` 的边界如下：
+
+~~~text
+data_source Source
+= 具体被长期跟踪的公众号 / KOL publication identity
+
+KOL Radar local Source
+= 本地运行态 watchlist row
+  (provider / external_id / last_synced_at / sync status)
+
+WeWeFeedProvider / ArticleURLProvider
+= acquisition adapters
+
+WeWe deployment
+= replaceable fetch middleware
+
+Article
+= downstream Evidence Resource
+
+Author
+= content author identity; Source != Author
+~~~
+
+因此，WeWe、`WEWE_RSS_BASE_URL`、feed endpoint 或 `ArticleURLProvider` 都不应被当成中央 Source Definition。中央 Source 应该是用户真正加入 Watchlist 的具体公众号/KOL。
+
+本地 `sources.registry_source_id` 是可选的中央 Source pointer。新建真实 Watchlist 时，推荐先在 `data_source` 完成 Source/Usage Reality Use，再绑定：
+
+~~~bash
+kol watchlist add \
+  --name '真实公众号名称' \
+  --provider wewe \
+  --external-id MP_FEED_ID \
+  --registry-source-id src_deadbeef
+~~~
+
+历史本地 Watchlist 可以后补：
+
+~~~bash
+kol watchlist bind --source-id 1 --registry-source-id src_deadbeef
+~~~
+
+未绑定的本地 Source 仍可运行，但只表示本地 runtime state，**不构成中央 Registry 的 Active Source Authority**。单篇 `ingest-url` 也不会自动把该公众号升级成长期 Watchlist Source。
+
+新增/移除真实 Watchlist Source 时，应同步触发 `data_source` 的 Reality Use / Usage Authority Review。

@@ -19,6 +19,9 @@ runner = CliRunner()
         ["query", "--help"],
         ["digest", "--help"],
         ["eval", "--help"],
+        ["watchlist", "--help"],
+        ["watchlist", "add", "--help"],
+        ["watchlist", "bind", "--help"],
     ],
 )
 def test_cli_help_commands_do_not_require_network(args):
@@ -62,3 +65,62 @@ def test_secret_redacting_filter_removes_sensitive_values():
     assert "bearer-secret" not in rendered
     assert "session-secret" not in rendered
     assert "safe=value" in rendered
+
+
+
+def test_watchlist_add_and_bind_registry_source_id_offline(tmp_path):
+    env = {"KOL_DB_PATH": str(tmp_path / "radar.db")}
+
+    added = runner.invoke(
+        app,
+        [
+            "watchlist",
+            "add",
+            "--name",
+            "真实公众号",
+            "--external-id",
+            "MP_REAL",
+            "--registry-source-id",
+            "src_1234abcd",
+        ],
+        env=env,
+    )
+    assert added.exit_code == 0, added.output
+    assert "registry=src_1234abcd" in added.output
+
+    listed = runner.invoke(app, ["watchlist", "list"], env=env)
+    assert listed.exit_code == 0, listed.output
+    assert "registry=src_1234abcd" in listed.output
+
+    rebound = runner.invoke(
+        app,
+        [
+            "watchlist",
+            "bind",
+            "--source-id",
+            "1",
+            "--registry-source-id",
+            "src_deadbeef",
+        ],
+        env=env,
+    )
+    assert rebound.exit_code == 0, rebound.output
+    assert "registry=src_deadbeef" in rebound.output
+
+
+def test_watchlist_rejects_invalid_registry_source_id(tmp_path):
+    result = runner.invoke(
+        app,
+        [
+            "watchlist",
+            "add",
+            "--name",
+            "真实公众号",
+            "--external-id",
+            "MP_REAL",
+            "--registry-source-id",
+            "not-a-source-id",
+        ],
+        env={"KOL_DB_PATH": str(tmp_path / "radar.db")},
+    )
+    assert result.exit_code != 0
