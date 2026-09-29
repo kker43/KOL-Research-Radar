@@ -190,6 +190,7 @@ id
 name
 provider
 external_id
+registry_source_id   # optional pointer to kker43/data_source
 status
 created_at
 last_synced_at
