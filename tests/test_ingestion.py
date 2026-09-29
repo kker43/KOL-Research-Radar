@@ -1,6 +1,10 @@
 from datetime import datetime, timezone
 
+import pytest
+
 from kol_radar.domain import OpinionDraft, Stance, Topic
+from kol_radar.extraction.base import OpinionExtractionError
+from kol_radar.extraction.codex_extractor import CodexOpinionExtractor
 from kol_radar.ingestion.service import IngestionService
 from kol_radar.providers.base import FetchedArticle, Paragraph
 from kol_radar.storage.repository import Repository
@@ -50,3 +54,30 @@ def test_ingest_same_article_twice_does_not_duplicate(tmp_path):
     assert len(opinions) == 1
     assert opinions[0].source_excerpt == "AI Capex 需求仍然强劲。"
     assert opinions[0].source_location == "p1"
+
+
+def test_extraction_failure_leaves_article_retryable(tmp_path):
+    fetched_article = FetchedArticle(
+        title="AI Capex 趋势",
+        url="https://mp.weixin.qq.com/s/retryable-test",
+        source_name="测试公众号",
+        author_name="测试作者",
+        published_at=datetime(2026, 8, 30, tzinfo=timezone.utc),
+        content="AI Capex 需求仍然强劲。",
+        paragraphs=[Paragraph("p1", "AI Capex 需求仍然强劲。")],
+    )
+    repository = Repository(tmp_path / "radar.db")
+
+    class FailingCodexRunner:
+        def generate(self, *, prompt, schema):
+            raise OpinionExtractionError("Codex process failed")
+
+    with pytest.raises(OpinionExtractionError):
+        IngestionService(
+            repository, CodexOpinionExtractor(runner=FailingCodexRunner())
+        ).ingest_fetched(fetched_article, provider_name="article_url")
+
+    stored = repository.get_article_by_url(fetched_article.url)
+    assert stored is not None
+    assert stored.processed_at is None
+    assert repository.list_opinions_for_article(stored.id) == []

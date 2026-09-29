@@ -1,7 +1,13 @@
+from enum import Enum
 from pathlib import Path
 
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+class LLMBackend(str, Enum):
+    codex = "codex"
+    openai = "openai"
 
 
 class Settings(BaseSettings):
@@ -11,6 +17,7 @@ class Settings(BaseSettings):
     initial_lookback_days: int = Field(default=60, ge=30, le=90)
     obsidian_vault_path: Path | None = None
     wewe_rss_base_url: str = "http://localhost:4000"
+    llm_backend: LLMBackend = LLMBackend.codex
     openai_api_key: str | None = None
     openai_model: str | None = None
     log_level: str = "INFO"
